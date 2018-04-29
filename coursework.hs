@@ -13,7 +13,7 @@ main = do
 
     charList <- newEmptyMVar
         
-    fileloop files gap pairAmount Map.empty charList
+    fileloop files gap pairAmount Map.empty charList []
     finalResult <- takeMVar charList
     putStrLn (show finalResult)
     
@@ -21,24 +21,30 @@ main = do
 -- Returns a list of the files
 findFiles :: [String] -> [String]
 findFiles contents
-    | length contents > 3 = drop ((length contents)-2) contents
+    | length contents > 3 = drop 2 contents
     | otherwise = (last contents):[]
 
 
-fileloop files gap pairAmount chars charList =
+fileloop files gap pairAmount chars charList maps =
     if length files > 0
         then do inFile <- readFile (files !! 0)
                 forkIO $ do
                     let charMap = returnCharPairs inFile gap
-                    fileloop (tail files) gap pairAmount charMap charList
+                    fileloop (tail files) gap pairAmount charMap charList (charMap:maps)
                     exitSuccess
                 
         -- output (getHighestPairs charMap pairNumber)
         else forkIO $ do
-                putMVar charList (getHighestPairs chars pairAmount)
+                let finalMap = mergeMaps maps
+                putMVar charList (getHighestPairs finalMap pairAmount)
                 exitSuccess
                 
-            
+
+-- Merge the maps in a list
+mergeMaps [x] = x
+mergeMaps mapList =
+    mergeMaps ((Map.unionWith (+) (mapList !! 0) (mapList !! 1)):(drop 2 mapList))
+    
 -- Return the charactermap of a file
 returnCharPairs inFile gap =
     addValuesTogether charPairs
