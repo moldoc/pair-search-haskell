@@ -1,7 +1,8 @@
 import Data.List
 import qualified Data.Map as Map
 import System.IO
-import Data.Tuple as Tuple
+import Control.Concurrent
+import System.Exit
 
 main = do
     iFile <- readFile "input.txt"
@@ -9,40 +10,46 @@ main = do
     let gap = read (contents !! 0) :: Int
     let pairAmount = read (contents !! 1) :: Int
     let files = findFiles contents
-    print files
-    let fileName = contents !! 2
-    inh <- openFile fileName ReadMode
-    outh <- openFile "output.txt" WriteMode
-    fileloop inh outh gap pairAmount []
-    hClose inh
-    hClose outh
-    --putStrLn pairAmount
-    -- start a thread for each file and wait for thread results
-    
---readLines :: Handle -> IO [String]
---readLines inputf = do ineof <-hIsEOF inputf
---                     if ineof
---                        then return []
---                        else do line <- hGetLine inputf
---                                rest <- readLines inputf
---                                return (line:rest)
 
+    charList <- newEmptyMVar
+        
+    fileloop files gap pairAmount Map.empty charList
+    finalResult <- takeMVar charList
+    putStrLn (show finalResult)
+    
+
+-- Returns a list of the files
 findFiles :: [String] -> [String]
 findFiles contents
     | length contents > 3 = drop ((length contents)-2) contents
     | otherwise = (last contents):[]
 
---fileloop :: Handle -> Handle -> Int -> IO ()
-fileloop inh outh gap pairAmount charList =
-    do ineof <- hIsEOF inh
-       if ineof
-            then do hPrint outh (getHighestPairs (addValuesTogether charList) pairAmount)
-                    return()
-            else do inpStr <- hGetLine inh
-                    let newChars = nub (findPair inpStr gap)
-                    --print (charList ++ newChars)
-                    fileloop inh outh gap pairAmount (charList ++ newChars)
-                    
+
+fileloop files gap pairAmount chars charList =
+    if length files > 0
+        then do inFile <- readFile (files !! 0)
+                forkIO $ do
+                    let charMap = returnCharPairs inFile gap
+                    fileloop (tail files) gap pairAmount charMap charList
+                    exitSuccess
+                
+        -- output (getHighestPairs charMap pairNumber)
+        else forkIO $ do
+                putMVar charList (getHighestPairs chars pairAmount)
+                exitSuccess
+                
+            
+-- Return the charactermap of a file
+returnCharPairs inFile gap =
+    addValuesTogether charPairs
+    where charPairs = concat (goThroughLines contents gap)
+          contents = lines inFile
+                  
+-- Return the unique character pairs in a file
+goThroughLines [] gap = []
+goThroughLines contents gap =
+    newChars:(goThroughLines (tail contents) gap)
+    where newChars = nub (findPair (contents !! 0) gap)
 
                     
 -- function for finding character pairs of a line with the given gap
@@ -51,6 +58,7 @@ findPair line gap
     | length line > 1 = (getPair line gap) ++ findPair (tail line) gap
     | otherwise = []
 
+
 getPair :: String -> Int -> [((Char,Char),Int)]
 getPair line gap
     | gap > 0 && gap < length line = (((head line), line !! gap),1):getPair line (gap-1)
@@ -58,9 +66,6 @@ getPair line gap
     | otherwise = []
     
     
--- Removes duplicate values. Call this with every line.
---getUniques :: [((Char,Char),Int)] -> [((Char,Char),Int)]
---getUniques charPairs = nub charPairs
 getUniques :: [(Char,Char)] -> [(Char,Char)]
 getUniques charPairs = nub charPairs
 
@@ -70,6 +75,7 @@ getUniques charPairs = nub charPairs
 addValuesTogether :: (Num v, Ord c1, Ord c2) => [((c1,c2),v)] -> Map.Map (c1,c2) v
 --(Num a, Num k, Ord k) => [(k,a)] -> Map.Map k a
 addValuesTogether charList = Map.fromListWith (+) charList
+
 
 -- Get the highest value(s)
 -- Call this after addValuesTogether
