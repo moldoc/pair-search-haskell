@@ -14,15 +14,24 @@ main = do
     charList <- newEmptyMVar
         
     fileloop files gap pairAmount Map.empty charList []
+    -- type [((Char, Char), Int)]
     finalResult <- takeMVar charList
-    putStrLn (show finalResult)
+    -- Call prettify with each row
+    let result = prettify finalResult
+    writeFile "output.txt" (unlines result) 
     
-
+    
 -- Returns a list of the files
 findFiles :: [String] -> [String]
 findFiles contents
     | length contents > 3 = drop 2 contents
     | otherwise = (last contents):[]
+    
+prettify [] = []
+prettify pairList =
+    prettifiedPair:prettify (drop 1 pairList)
+    where pair = pairList !! 0
+          prettifiedPair= ((show (fst (fst pair))) ++ " " ++ (show (snd (fst pair))) ++ " " ++ (show (snd pair)))
 
 
 fileloop files gap pairAmount chars charList maps =
@@ -70,10 +79,6 @@ getPair line gap
     | gap > 0 && gap < length line = (((head line), line !! gap),1):getPair line (gap-1)
     | gap > 0 && gap >= length line = (((head line), line !! ((length line)-1)),1):getPair line ((length line)-2)
     | otherwise = []
-    
-    
-getUniques :: [(Char,Char)] -> [(Char,Char)]
-getUniques charPairs = nub charPairs
 
     
 -- Add together values on the same keys
