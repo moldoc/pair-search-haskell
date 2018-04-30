@@ -32,7 +32,7 @@ prettify [] x = []
 prettify pairList totalLines =
     prettifiedPair:prettify (drop 1 pairList) totalLines
     where pair = pairList !! 0
-          prettifiedPair= ((show (fst (fst pair))) ++ " " ++ (show (snd (fst pair))) ++ " " ++ (show (snd pair)) ++ " " ++ (show totalLines))
+          prettifiedPair= ((show . fst . fst $ pair) ++ " " ++ (show . snd . fst $ pair) ++ " " ++ (show . snd $ pair) ++ " " ++ (show totalLines))
 
 fileloop
     :: [FilePath]
@@ -54,7 +54,7 @@ fileloop files lineAmount gap pairAmount chars charList maps =
                     exitSuccess
         else forkIO $ do
                 let finalMap = mergeMaps maps
-                putMVar charList ((take pairAmount (sortMap finalMap)), lineAmount)
+                putMVar charList ((take pairAmount $ sortMap finalMap), lineAmount)
                 exitSuccess
                 
 
@@ -68,7 +68,7 @@ mergeMaps mapList =
 returnCharPairs :: String -> Int -> Map.Map (Char, Char) Int
 returnCharPairs inFile gap =
     addValuesTogether charPairs
-    where charPairs = concat (goThroughLines contents gap)
+    where charPairs = concat $ goThroughLines contents gap
           contents = lines inFile
                   
 -- Return the unique character pairs in a file
