@@ -14,9 +14,7 @@ main = do
     charList <- newEmptyMVar
         
     fileloop files gap pairAmount Map.empty charList []
-    -- type [((Char, Char), Int)]
     finalResult <- takeMVar charList
-    -- Call prettify with each row
     let result = prettify finalResult
     writeFile "output.txt" (unlines result) 
     
@@ -27,6 +25,7 @@ findFiles contents
     | length contents > 3 = drop 2 contents
     | otherwise = (last contents):[]
     
+-- Prettifies the output for the file
 prettify [] = []
 prettify pairList =
     prettifiedPair:prettify (drop 1 pairList)
@@ -41,11 +40,9 @@ fileloop files gap pairAmount chars charList maps =
                     let charMap = returnCharPairs inFile gap
                     fileloop (tail files) gap pairAmount charMap charList (charMap:maps)
                     exitSuccess
-                
-        -- output (getHighestPairs charMap pairNumber)
         else forkIO $ do
                 let finalMap = mergeMaps maps
-                putMVar charList (getHighestPairs finalMap pairAmount)
+                putMVar charList (take pairAmount (sortMap finalMap))
                 exitSuccess
                 
 
@@ -67,7 +64,7 @@ goThroughLines contents gap =
     where newChars = nub (findPair (contents !! 0) gap)
 
                     
--- function for finding character pairs of a line with the given gap
+-- Find character pairs of a line with the given gap
 findPair :: String -> Int -> [((Char,Char),Int)]
 findPair line gap
     | length line > 1 = (getPair line gap) ++ findPair (tail line) gap
@@ -87,22 +84,5 @@ addValuesTogether :: (Num v, Ord c1, Ord c2) => [((c1,c2),v)] -> Map.Map (c1,c2)
 --(Num a, Num k, Ord k) => [(k,a)] -> Map.Map k a
 addValuesTogether charList = Map.fromListWith (+) charList
 
-
--- Get the highest value(s)
--- Call this after addValuesTogether
-getHighestValue charMap = filter is_biggest sorted
-    where sorted = sortBy (\((k1, k2),v1) ((k3, k4), v2) -> v2 `compare` v1) $ Map.toList charMap
-          max_v = snd $ head sorted
-          is_biggest ((key1, key2),value) = value == max_v
-
--- Get the highest values
--- 1. Take the map of character pairs
--- 2. Call getHighestValue
--- 3. If getHighestValue returns a map whose length >= 5, take 5 first pairs and return
--- 4. If the map's length < 5, take the item's it has, and call getHighestValue with a map
---    which no longer has the character pairs the first call returned
-getHighestPairs charMap pairNumber
-    | listLength >=pairNumber = take pairNumber highestList
-    | otherwise = take listLength highestList
-    where highestList = getHighestValue charMap
-          listLength = length highestList
+sortMap charMap =
+    sortBy (\((k1, k2),v1) ((k3, k4), v2) -> v2 `compare` v1) $ Map.toList charMap
