@@ -76,8 +76,13 @@ goThroughLines :: [String] -> Int -> [[((Char, Char), Int)]]
 goThroughLines [] gap = []
 goThroughLines contents gap =
     newChars:(goThroughLines (tail contents) gap)
-    where newChars = nub (findPair (contents !! 0) gap)
+    where newChars = nub (findPair noSpace gap)
+          noSpace = filter isSpace (contents !! 0)
+	      
+-- Two functions for deleting the spaces on a line
+isSpace char = not (char `elem` [' '])
 
+filterSpaces line = filter isSpace line
                     
 -- Find character pairs of a line with the given gap
 findPair :: String -> Int -> [((Char,Char),Int)]
